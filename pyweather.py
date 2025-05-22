@@ -4,28 +4,33 @@
 import requests
 
 """
-    This script queries your approximate location from ipinfo.io. It then requests the weather forecast to the metaweather.com API
+    This script queries your approximate location from ipinfo.io. It then requests the weather forecast to the wttr.in API
     It will print the extended forecast for the biggest city closer to your location
 """
+import sys
 
-my_info = requests.get('https://ipinfo.io').json()
-cities_around = requests.get('https://www.metaweather.com/api/location/search/?lattlong=' + my_info['loc'])
-closer_city = cities_around.json()[0]
+def get_weather_data(city):
+    """Fetches weather data for a given city from wttr.in."""
+    url = f"https://wttr.in/{city}?format=j1"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raises an HTTPError for bad responses (4XX or 5XX)
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        # Handle connection errors, timeouts, etc.
+        print(f"Error fetching weather data: {e}", file=sys.stderr)
+        return None
 
-forecast = requests.get('https://www.metaweather.com/api/location/' + str(closer_city['woeid'])).json()
+def main():
+    """Main function to get city and print weather data."""
+    city = "London"  # Default city
+    if len(sys.argv) > 1:
+        city = sys.argv[1]
 
-print('Extended forecast for ' + forecast['title'] + ' ' + forecast['location_type'])
-print('=' * 75)
-print('Date             Forecast   Wind Speed (mph) Min (°C) Max (°C)   Humid (%)')
-print('=' * 75)
-for day in forecast['consolidated_weather']:
-    properties = [
-        day['applicable_date'],
-        day['weather_state_name'],
-        day['wind_direction_compass'],
-        day['wind_speed'],
-        day['min_temp'],
-        day['max_temp'],
-        day['humidity']
-    ]
-    print('{:<10s}{:>15s}{:>7s}{:>12.1f}{:>9.1f}{:>9.1f}{:>12.1f}'.format(*properties))
+    forecast_data = get_weather_data(city)
+
+    if forecast_data:
+        print(forecast_data)
+
+if __name__ == "__main__":
+    main()
